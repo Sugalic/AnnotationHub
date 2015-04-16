@@ -1,0 +1,27 @@
+import(methods)
+
+importFrom(stats, setNames)
+
+importFrom(httr, GET, content, progress, write_disk, stop_for_status, status_code)
+
+importFrom(utils, capture.output, head, .DollarNames)
+
+importFrom(AnnotationDbi, dbconn, dbfile)
+
+import(RSQLite)
+
+importFrom(interactiveDisplayBase, display)
+
+importFrom(BiocInstaller, biocVersion)
+
+import(S4Vectors)
+
+exportClasses(AnnotationHub) 
+
+export(AnnotationHub, cache, "cache<-", display, hubUrl, hubCache,
+    hubOption, setHubOption, possibleDates, mcols)
+
+S3method(.DollarNames, AnnotationHub)
+
+exportMethods(names, length, "$", "[", query, subset, "[[", show,
+    snapshotDate, "snapshotDate<-", display, mcols, dbconn, dbfile)

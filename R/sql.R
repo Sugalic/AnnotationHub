@@ -1,0 +1,329 @@
+.id_as_single_string <- function(x)
+    paste(sprintf("'%s'", .db_uid(x)), collapse=", ")
+
+.query_as_data.frame <- function(x, query)
+{
+    tbl <- dbGetQuery(dbconn(x), query)
+    ridx <- match(names(x), tbl$ah_id)
+    cidx <- match("ah_id", names(tbl))
+    rownames(tbl) <- tbl$ah_id
+    tbl[ridx, -cidx, drop=FALSE]
+}
+
+.getAHNamesForId <- function(conn, ids){
+    query <- sprintf(
+        'SELECT resources.id, resources.ah_id
+         FROM resources, biocversions
+         WHERE biocversion == "%s"
+         AND biocversions.resource_id == resources.id',
+        biocVersion())
+    mtchData <- dbGetQuery(conn, query)
+    names(ids) <- mtchData[mtchData[[1]] %in% ids,][[2]]
+    ids
+}
+
+.uid0 <- function(conn, date)
+    ## AnnotationHub() helper
+{
+    ## TODO: this may be able to be faster by testing whether to do the sorting
+    ## in R vs the DB (not terribly slow though)
+    ## 1st get the ids that match our version of Bioc
+    query <- sprintf(
+        'SELECT resources.id
+         FROM resources, biocversions
+         WHERE biocversion == "%s"
+         AND biocversions.resource_id == resources.id',
+        biocVersion())
+    biocIds <- dbGetQuery(conn, query)[[1]]
+
+    ## Then filter so we get the most recent dates after grouping by record_id
+    query <- sprintf(
+        'SELECT id FROM 
+         (SELECT * FROM resources where rdatadateadded <= "%s")
+         GROUP BY record_id ORDER BY rdatadateadded ASC',
+        date)        
+    dateFilterIds <- dbGetQuery(conn, query)[[1]]
+    
+    ## Third filter so that rdatadateremoved (where that is not null)
+     query <- sprintf(
+         'SELECT id from resources  WHERE rdatadateremoved <= "%s"', date) 
+     removeIds <- dbGetQuery(conn, query)[[1]]
+    
+    ## Then get the intersection
+    allIds <- intersect(biocIds, dateFilterIds)
+    
+    allIds <- setdiff(allIds,removeIds) 
+
+    ## Then match back to the AHIDs
+    .getAHNamesForId(conn, allIds)
+}
+## test: tail(AnnotationHub:::.db_uid(mh))
+
+## helper to retrieve tags
+.tags <- function(x) {
+    query <- sprintf(
+        'SELECT DISTINCT tag, resource_id AS id FROM tags
+         WHERE resource_id IN (%s)',
+        .id_as_single_string(x))
+    dbGetQuery(dbconn(x), query)
+}
+
+.possibleDates <- function(conn) {
+    query <- 'SELECT DISTINCT rdatadateadded FROM resources'
+    dbGetQuery(conn, query)[[1]]
+}
+
+## helper for extracting rdataclass
+.rdataclass <- function(x) {
+    query <- sprintf(
+        'SELECT DISTINCT rdataclass, resource_id AS id FROM rdatapaths
+         WHERE resource_id IN (%s)',
+        .id_as_single_string(x))
+    dbGetQuery(dbconn(x), query)
+}
+
+## helper for extracting sourceUrls
+.sourceurl <- function(x) {
+    query <- sprintf(
+        'SELECT DISTINCT sourceurl, resource_id AS id FROM input_sources
+         WHERE resource_id IN (%s)',
+        .id_as_single_string(x))
+    dbGetQuery(dbconn(x), query)
+}
+
+## ##  helper for extracting recipes 
+## .recipe <- function(x) {
+##     query <- sprintf(
+##         'SELECT DISTINCT rec.recipe, res.id FROM
+##          recipes AS rec, resources AS res
+##          WHERE rec.id=res.recipe_id AND res.id IN (%s)',
+##         .id_as_single_string(x))
+##     dbGetQuery(.db_connection(x), query)
+## }
+
+##  helper for extracting sourcetype
+.sourcetype <- function(x) {
+    query <- sprintf(
+        'SELECT DISTINCT sourcetype, resource_id AS id FROM input_sources
+         WHERE resource_id IN (%s)',
+        .id_as_single_string(x))
+    dbGetQuery(dbconn(x), query)
+}
+
+
+## Helper to collapse many to one fields (like above) into one space
+.collapse_as_string <- function(x, FUN, fieldName)
+{
+    uid <- .db_uid(x)
+    tbl <- FUN(x)
+    lst <- vapply(split(tbl[[1]], tbl[["id"]]), paste,
+                  character(1), collapse=", ")
+    lst <- lst[match(uid, names(lst))]
+    setNames(lst, names(uid))           # allows for x with no tags 
+}
+
+
+## This gets many useful fields together for the end user and puts them into
+## a nice square shaped container.
+.resource_table <- function(x)
+{
+    query <- sprintf(
+        'SELECT %s FROM resources
+         WHERE resources.id IN (%s)',
+        .DB_RESOURCE_FIELDS, .id_as_single_string(x))
+    tbl <- .query_as_data.frame(x, query)
+    tbl[["tags"]] <- .collapse_as_string(x,FUN=.tags,fieldName='tag')
+    tbl[["rdataclass"]] <- .collapse_as_string(x,FUN=.rdataclass,
+                                               fieldName='rdataclass')
+    tbl[["sourceurl"]] <- .collapse_as_string(x,FUN=.sourceurl,
+                                              fieldName='sourceurl')
+    tbl[["sourcetype"]] <- .collapse_as_string(x,FUN=.sourcetype,
+                                               fieldName='sourcetype')
+    tbl
+}
+
+
+.resource_columns <- function()
+    strsplit(gsub("resources.", "", .DB_RESOURCE_FIELDS), ", ")[[1]]
+
+.resource_column <- function(x, name)
+{
+    valid <- .resource_columns()
+    if (!name %in% valid) {
+        msg <- sprintf("%s is not a resource data column", sQuote(name))
+        stop(msg)
+    }
+    query <- sprintf(
+        'SELECT ah_id, %s FROM resources WHERE id IN (%s)',
+        name, .id_as_single_string(x))
+    .query_as_data.frame(x, query)[[1]]
+}
+
+.join_resource_columns <- function(x, table, names)
+{
+    names <- paste(names, collapse=", ")
+    query <- sprintf(
+        "SELECT ah_id, %s FROM resources, %s
+         WHERE resources.id IN (%s)
+         AND %s.resource_id == resources.id",
+        names, table, .id_as_single_string(x), table)
+    .query_as_data.frame(x, query)
+}
+
+.datapath <- function(x)
+{
+    query <- sprintf(
+        'SELECT resource_id AS id, rdatapath
+         FROM rdatapaths WHERE resource_id IN (%s)',
+        .id_as_single_string(x))
+    .query_as_data.frame(x, query)[[1]]
+}
+
+## This is used by cache to get the rDataPath ID for a resource
+## I think this should say to select 'id' as id to extract the rdatapathID 
+## (instead of the resource_id)
+.datapathIds <- function(x)
+{
+#     query <- sprintf(
+#         'SELECT resource_id AS id, resource_id
+#          FROM rdatapaths WHERE resource_id IN (%s)',
+#         .id_as_single_string(x))
+#     ## TODO: 'single': sounds incorrect...
+#     .query_as_data.frame(x, query)[[1]]    
+    query <- sprintf(
+        'SELECT DISTINCT id
+         FROM rdatapaths WHERE resource_id IN (%s)',
+        .id_as_single_string(x))
+    ## TODO: 'single': sounds incorrect...
+    dbGetQuery(dbconn(x), query)[[1]]    
+}
+
+## 
+.dataclass <- function(x)
+{
+    query <- sprintf(
+        'SELECT DISTINCT r.ah_id AS ah_id, rdp.dispatchclass
+         FROM rdatapaths AS rdp, resources AS r WHERE
+         r.id = rdp.resource_id
+         AND rdp.resource_id IN (%s)',
+        .id_as_single_string(x))
+    .query_as_data.frame(x, query)[[1]]
+}
+
+## mcols
+.mcols <- function(x){
+    DataFrame(.resource_table(x))
+
+    ## TODO: this is not enough, I need to move the addition of tags back to .resource_table (OR maybe make a new function resource_table) to consolidate attachment of thigns like tags etc.
+}
+## mcols method
+setMethod("mcols", "AnnotationHub", function(x){ .mcols(x)} )
+
+## 
+## queries used by show,AnnotationHub-method
+## 
+.title_data.frame <-
+    function(x)
+{
+    query <- sprintf(
+        "SELECT ah_id, title FROM resources
+         WHERE resources.id IN (%s)",
+        .id_as_single_string(x))
+    .query_as_data.frame(x, query)
+}
+
+.count_resources <-
+    function(x, column, limit=10)
+{
+    query <- sprintf(
+        "SELECT %s FROM resources
+         WHERE resources.id IN (%s)
+         GROUP BY %s ORDER BY COUNT(%s) DESC LIMIT %d", 
+        column, .id_as_single_string(x), column, column, limit)
+    dbGetQuery(dbconn(x), query)[[column]]
+}
+
+.count_join_resources <-
+    function(x, table, column, limit=10)
+{
+    query <- sprintf(
+        "SELECT %s FROM resources, %s
+         WHERE resources.id IN (%s) AND %s.resource_id == resources.id
+         GROUP BY %s ORDER BY COUNT(%s) DESC LIMIT %d", 
+        column, table,
+        .id_as_single_string(x), table,
+        column, column, limit)
+    dbGetQuery(dbconn(x), query)[[column]]
+}
+
+## make a function to create a view whenever the DB is updated..
+## SQL will look kind of like the one used for go:
+## CREATE VIEW go AS
+## SELECT _id,go_id,evidence, 'BP' AS 'ontology' FROM go_bp
+## UNION
+## SELECT _id,go_id,evidence, 'CC' FROM go_cc
+## UNION
+## SELECT _id,go_id,evidence, 'MF' FROM go_mf;
+
+
+## SO now we just need to decide on which views we want/need.
+## So really we want to 1st refactor the show method (and make hard decisions there)
+## And the view we create here should reflect those ideas.
+
+
+## CREATE VIEW hub AS
+## SELECT * FROM resources AS r, rdatapaths AS rdp, input_sources AS ins  WHERE r.id=rdp.resource_id AND r.id=ins.resource_id LIMIT 2;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Sonali better date query
+## SELECT * FROM resources where rdatadateadded <= "2013-03-19" GROUP BY title ORDER BY rdatadateadded DESC limit 2;
+
+
+## Example:
+## SELECT COUNT(id) AS theCount, `Tag` from `images-tags`
+## GROUP BY `Tag`
+## ORDER BY theCount DESC
+## LIMIT 20
+
+
+## SELECT id FROM 
+## (SELECT * FROM
+## (SELECT * FROM resources where rdatadateadded <= "2013-03-19")
+## AS res GROUP BY title ORDER BY rdatadateadded DESC limit 1);
+
+
+## SELECT MAX(id) FROM (SELECT id FROM (select * from resources where ah_id in ('AH523','AH22249')) AS res GROUP BY title) AS res;
+## same issue
+
+
+## Here is an example that actually does get close:
+## SELECT max(id) as mid, id, ah_id, title FROM (select * from resources where ah_id in ('AH523','AH22249','AH524','AH22250')) AS res GROUP BY maintainer;
+
+## Basically I would just want it like this:
+## SELECT max(id) as mid FROM (select * from resources where ah_id in ('AH523','AH22249','AH524','AH22250')) AS res GROUP BY maintainer;
+
+## And then group by title instead so pretty much like this:
+## SELECT max(id) as id FROM (SELECT * FROM resources where rdatadateadded <= "2013-03-19") AS res GROUP BY title;
