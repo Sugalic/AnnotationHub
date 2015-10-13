@@ -1,0 +1,73 @@
+CHANGES IN VERSION 2.1.26
+--------------------------
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o seqinfo(GRanges) for all genomes supported by GenomeInfoDb now 
+      contain seqlengths. 
+      
+
+CHANGES IN VERSION 2.1.21
+--------------------------
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o fileName() returns the cache path on the disk for a file that
+      has been cached and NA for files which have not been cached.
+    
+    o The error message (when file is not downloaded from the hub)
+      displays the AnnotationHub name, title, and reason for failure.
+
+
+CHANGES IN VERSION 2.1
+----------------------
+
+NEW FEATURES
+
+    o as.list() splits AnnotationHub instances into a list of
+    instances, each with a single record. c() concatenates hubs.
+
+BUG FIXES
+
+    o cache<- now behaves as documented, e.g., removing the cached
+    version of the file.
+
+CHANGES IN VERSION 2.0.0
+------------------------
+
+NEW FEATURES
+
+    o AnnotationHub is all new.  We basically rewrote the entire thing.
+
+    o The back end is new (new database, new way of tracking/routing
+    data etc.)
+
+    o The front end is new (new AnnotationHub object, new methods, new
+    behaviors, new ways of finding and downloading data)
+
+    o The metadata has also been cleaned up and made more
+    consistent/searchable 
+
+    o The recipes that are used to populate these data have also been
+    cleaned up.  
+
+    o There is also a new vignette to explain how to use the new
+    AnnotationHub in detail 
+
+IMPROVEMENTS SINCE LAST TIME
+
+    o The old way of finding data (an enormous tree of paths), was not
+    really scalable to the amount of data we have to provide access
+    to.  So we junked it.  Now you have a number of better methods to
+    allow you to search for terms instead.
+
+    o The new hub interface can be searched using a new display
+    method, but it can *also* be searched entirely from the command
+    line.  This allows you to use it in examples and scripts in a way
+    that is friendlier for reproducible research.
+    
+    o For users who want to contribute valuable new annotation
+    resources to the AnnotationHub, it is now possible to write a
+    recipe and test that it works for yourself.  Then once you are
+    happy with it, you can contact us and we can add data to the
+    AnnotationHub.
