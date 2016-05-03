@@ -1,0 +1,87 @@
+import(methods)
+import(BiocGenerics)
+import(RSQLite)
+import(S4Vectors)
+
+importFrom(stats, setNames)
+importFrom(grDevices, rgb)
+importFrom(utils, packageVersion, read.csv, read.delim, unzip, capture.output,
+    .DollarNames
+)
+importFrom(httr, 
+    GET, content, parse_url, progress, write_disk,
+    stop_for_status, status_code, use_proxy
+)
+importFrom(interactiveDisplayBase, display)
+importFrom(BiocInstaller, biocVersion)
+
+importMethodsFrom(AnnotationDbi, dbconn, dbfile)
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Export S4 classes
+###
+
+exportClasses(
+    Hub, 
+    AnnotationHub, AnnotationHubResource
+)
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Export S4 methods for generics not defined in AnnotationHub 
+###
+
+exportMethods(
+    names, length, "$", "[", subset, "[[", as.list, c,
+    show, fileName, display, mcols, dbconn, dbfile
+)
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Export S4 generics defined in AnnotationHub + export corresponding
+### methods
+###
+
+export(
+    cache, "cache<-", query,
+    hubUrl, hubCache, hubDate,
+    snapshotDate, "snapshotDate<-",
+    getHub,
+    package
+)
+
+exportMethods(
+    cache, "cache<-", query,
+    hubUrl, hubCache, hubDate, 
+    snapshotDate, "snapshotDate<-",
+    getHub,
+    package
+)
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Export non-generic functions
+###
+
+export(
+    .Hub, AnnotationHub, display, 
+    removeCache,
+    getAnnotationHubOption, setAnnotationHubOption, 
+    possibleDates, mcols,
+    .httr_proxy, .hub_option_key, .db_close,
+    recordStatus
+)
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Export S3 methods
+###
+
+S3method(.DollarNames, Hub)
+
+S3method(as.list, Hub)
+
+### Also export them thru the export() directive so that (a) they can be
+### called directly, (b) tab-completion on the name of the generic shows them,
+### and (c) methods() doesn't asterisk them.
+export(
+    .DollarNames.Hub, 
+    as.list.Hub
+)
+
