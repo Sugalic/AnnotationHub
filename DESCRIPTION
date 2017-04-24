@@ -1,0 +1,44 @@
+Package: AnnotationHub
+Type: Package
+Title: Client to access AnnotationHub resources
+Version: 2.8.0
+Authors@R: 
+    c(person("Martin", "Morgan", email="martin.morgan@roswellpark.org",
+             role="cre"),
+      person("Marc", "Carlson", role="ctb"),
+      person("Dan", "Tenenbaum", role="ctb"),
+      person("Sonali", "Arora", role="ctb"))
+biocViews: Infrastructure, DataImport, GUI, ThirdPartyClient
+Maintainer: Bioconductor Package Maintainer <maintainer@bioconductor.org>
+Description: This package provides a client for the Bioconductor
+    AnnotationHub web resource. The AnnotationHub web resource
+    provides a central location where genomic files (e.g., VCF, bed,
+    wig) and other resources from standard locations (e.g., UCSC,
+    Ensembl) can be discovered. The resource includes metadata about
+    each resource, e.g., a textual description, tags, and date of
+    modification. The client creates and manages a local cache of
+    files retrieved by the user, helping with quick and reproducible
+    access.
+License: Artistic-2.0
+Depends: BiocGenerics (>= 0.15.10)
+Imports: utils, methods, grDevices, RSQLite, BiocInstaller,
+    AnnotationDbi (>= 1.31.19), S4Vectors, interactiveDisplayBase, httr, yaml
+Suggests: IRanges, GenomicRanges, GenomeInfoDb, VariantAnnotation, Rsamtools,
+    rtracklayer, BiocStyle, knitr, AnnotationForge, rBiopaxParser,
+    RUnit, GenomicFeatures, MSnbase, mzR, Biostrings,
+    SummarizedExperiment, ExperimentHub
+Enhances: AnnotationHubData
+Collate: AnnotationHubOption.R AllGenerics.R Hub-class.R db-utils.R 
+    AnnotationHub-class.R 
+    AnnotationHubResource-class.R
+    BEDResource-class.R
+    ProteomicsResource-class.R
+    EpigenomeResource-class.R 
+    EnsDbResource-class.R 
+    utilities.R sql-utils.R Hub-utils.R cache-utils.R zzz.R
+VignetteBuilder: knitr
+NeedsCompilation: yes
+Author: Martin Morgan [cre],
+  Marc Carlson [ctb],
+  Dan Tenenbaum [ctb],
+  Sonali Arora [ctb]

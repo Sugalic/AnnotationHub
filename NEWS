@@ -1,0 +1,198 @@
+CHANGES IN VERSION 2.8.0
+------------------------
+
+NEW FEATURES
+
+    o add .get1,RDSResource-method
+
+    o add RdsResource class
+
+    o add EnsDb dispatch class
+
+    o expose rdatapath in metadata
+
+MODIFICATIONS
+
+    o modify records exposed as metadata
+      - expose records added <= snapshot date
+      - expose a single OrgDb per organism per BioC version
+
+    o edits to .get1,GenomicScores-method and .get1,GenomicScoresResource-method
+
+    o work on biocVersion and snapshotDate relationship:
+      - snapshotDate() must be <= biocVersion() release date 
+      - possibleDates() are now filtered by snapshotDate()
+
+    o remove GenomicScoresResource; Robert Castelo will handle loading these
+    resources in his GenomicScores software package
+
+    o Changed show method for hub object 
+      - removed sourcelastmodifieddate
+      - added rdatadateadded
+ 
+
+BUG FIXES
+
+    o fix bug in ordering of output from .uid0()
+
+    o fix bugs in 'snapshotDate<-' method
+
+CHANGES IN VERSION 2.6.0
+------------------------
+
+NEW FEATURES
+
+    o add vignette section on sharing resources on clusters
+
+    o add 'preparerclass' to index.rda to allow search by package name for
+      ExperimentHub objects
+
+    o add GenomicScoresResource class for Robert Castelo
+
+MODIFICATIONS
+
+    o return 'tags' metadata as list instead of comma-separated character
+      vector
+
+    o move AnnotationHubRecipes vignette to AnnotationHubData
+
+    o move listResources() and loadResources() from ExperimentHub
+
+    o expose additional fields in .DB_RESOURCE_FIELDS()
+
+    o modify cache path to avoid creating a '~' directory on Mac
+
+    o use https: NCBI rul in documentation
+
+    o modify .get1,EpiExpressionTextResource-method to use 'gene_id'
+      column as row names
+
+
+CHANGES IN VERSION 2.4.0
+------------------------
+
+NEW FEATURES
+
+    o add new status codes '4' and '5' to 'statuses' mysql table;
+      change 'status_id' field to '4' for all removed records to date
+
+    o add getRecordStatus() generic
+
+    o add package() generic
+
+    o create 'Hub' VIRTUAL class
+      - add new .Hub() base constructor for all hubs
+      - add getAnnotationHubOption() and setAnnotationHubOption()
+      - promote cache() to generic 
+      - add getHub() getter for AnnotationHubResource class
+      - add getUrl(), getCache(), getDate() getters
+      - export as few db helpers as possible
+
+    o add 'EpigenomeRoadmapNarrowAllPeaks' and 
+      'EpigenomeRoadmapNarrowFDR' classes
+
+MODIFICATIONS
+
+    o distinguish between broad and narrow peak files in 
+      EpigenomeRoadmapFileResource dispatch class
+
+    o don't use cache for AnnotationHub SQLite connection
+      - originally introduced so could be closed if needed, but 
+        creates complexity
+      - instead, open / close connection around individual queries (not a
+        performance concern)
+      - expose hub, cache, proxy in AnnotationHub constructor
+      - document dbconn,Hub-method, dbfile,Hub-method, .db_close
+
+    o snapshotDate now uses timestamp (last date any row was modified) instead 
+      of rdatadateadded
+
+    o .require fails rather than emits warning
+      - unit test on .require()
+      - also, cache(hub[FALSE]) does not create spurious error
+
+    o work on removed records and biocVersion
+      - .uid0() was reorganized and no longer groups by record_id
+      - metadata is returned for records with 
+        biocversion field <= current biocVersion
+        instead of an exact match with the current version
+      - metadata is not returned for removed records
+
+BUG FIXES
+
+    o Work around httr() progress() bug by disabling progress bar
+
+
+CHANGES IN VERSION 2.2.0
+------------------------
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o seqinfo(GRanges) for all genomes supported by GenomeInfoDb now 
+      contain seqlengths. 
+
+
+CHANGES IN VERSION 2.1.21
+--------------------------
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o fileName() returns the cache path on the disk for a file that
+      has been cached and NA for files which have not been cached.
+ 
+    o The error message (when file is not downloaded from the hub)
+      displays the AnnotationHub name, title, and reason for failure.
+
+
+CHANGES IN VERSION 2.1
+----------------------
+
+NEW FEATURES
+
+    o as.list() splits AnnotationHub instances into a list of
+    instances, each with a single record. c() concatenates hubs.
+
+BUG FIXES
+
+    o cache<- now behaves as documented, e.g., removing the cached
+    version of the file.
+
+CHANGES IN VERSION 2.0.0
+------------------------
+
+NEW FEATURES
+
+    o AnnotationHub is all new.  We basically rewrote the entire thing.
+
+    o The back end is new (new database, new way of tracking/routing
+    data etc.)
+
+    o The front end is new (new AnnotationHub object, new methods, new
+    behaviors, new ways of finding and downloading data)
+
+    o The metadata has also been cleaned up and made more
+    consistent/searchable 
+
+    o The recipes that are used to populate these data have also been
+    cleaned up.  
+
+    o There is also a new vignette to explain how to use the new
+    AnnotationHub in detail 
+
+IMPROVEMENTS SINCE LAST TIME
+
+    o The old way of finding data (an enormous tree of paths), was not
+    really scalable to the amount of data we have to provide access
+    to.  So we junked it.  Now you have a number of better methods to
+    allow you to search for terms instead.
+
+    o The new hub interface can be searched using a new display
+    method, but it can *also* be searched entirely from the command
+    line.  This allows you to use it in examples and scripts in a way
+    that is friendlier for reproducible research.
+    
+    o For users who want to contribute valuable new annotation
+    resources to the AnnotationHub, it is now possible to write a
+    recipe and test that it works for yourself.  Then once you are
+    happy with it, you can contact us and we can add data to the
+    AnnotationHub.
